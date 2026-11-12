@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bắn pháo hoa</title>
+<style>
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: radial-gradient(ellipse at bottom, #1b2440 0%, #0a0e1f 70%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    overflow: hidden;
+  }
+  canvas { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+  #btn {
+    position: relative; z-index: 2;
+    padding: 18px 44px; font-size: 22px; font-weight: 700;
+    color: #fff; background: linear-gradient(135deg, #ff5f6d, #ffc371);
+    border: none; border-radius: 50px; cursor: pointer;
+    box-shadow: 0 8px 30px rgba(255, 95, 109, .45);
+    transition: transform .15s, box-shadow .15s;
+  }
+  #btn:hover { transform: translateY(-2px) scale(1.04); }
+  #btn:active { transform: scale(.96); }
+  #btn:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+  #msg {
+    position: fixed; top: 22%; left: 50%; z-index: 3;
+    transform: translate(-50%, 0) scale(.3);
+    font-size: clamp(40px, 10vw, 96px); font-weight: 800;
+    color: #ffe27a; text-shadow: 0 0 20px #ff9d00, 0 0 50px #ff5f6d;
+    opacity: 0; pointer-events: none; white-space: nowrap;
+  }
+  #msg.show { animation: pop 1s cubic-bezier(.2, 1.4, .4, 1) forwards; }
+  @keyframes pop {
+    0% { opacity: 0; transform: translate(-50%, 0) scale(.3); }
+    100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) { #msg.show { animation-duration: .01s; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="msg">🎉 Chúc mừng! 🎉</div>
+ 
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const msg = document.getElementById('msg');
+let W, H;
+function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+addEventListener('resize', resize); resize();
+ 
+const rockets = [], sparks = [];
+const colors = [0, 30, 50, 120, 180, 220, 280, 320];
+ 
+// Tên lửa bay từ nút lên một điểm trên trời
+function launch(x0, y0) {
+  const tx = x0 + (Math.random() - .5) * W * .7;
+  const ty = H * (0.12 + Math.random() * 0.35);
+  const dx = tx - x0, dy = ty - y0;
+  const dist = Math.hypot(dx, dy);
+  const speed = 9;
+  rockets.push({
+    x: x0, y: y0, vx: dx / dist * speed, vy: dy / dist * speed,
+    ty, hue: colors[Math.floor(Math.random() * colors.length)]
+  });
+}
+ 
+function explode(x, y, hue) {
+  const n = 80;
+  for (let i = 0; i < n; i++) {
+    const a = (Math.PI * 2 * i) / n + Math.random() * .1;
+    const s = 1.5 + Math.random() * 4.5;
+    sparks.push({
+      x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+      life: 1, decay: .012 + Math.random() * .014,
+      hue: hue + (Math.random() - .5) * 30
+    });
+  }
+}
+ 
+function loop() {
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'rgba(0,0,0,.2)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'lighter';
+ 
+  for (let i = rockets.length - 1; i >= 0; i--) {
+    const r = rockets[i];
+    r.x += r.vx; r.y += r.vy;
+    ctx.fillStyle = `hsl(${r.hue},100%,75%)`;
+    ctx.beginPath(); ctx.arc(r.x, r.y, 2.5, 0, 7); ctx.fill();
+    if (r.y <= r.ty) { explode(r.x, r.y, r.hue); rockets.splice(i, 1); }
+  }
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const p = sparks[i];
+    p.vx *= .98; p.vy = p.vy * .98 + .05;
+    p.x += p.vx; p.y += p.vy; p.life -= p.decay;
+    if (p.life <= 0) { sparks.splice(i, 1); continue; }
+    ctx.fillStyle = `hsla(${p.hue},100%,60%,${p.life})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, 7); ctx.fill();
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+ 
+// Tự chạy ngay khi mở trang: bắn pháo từ đáy màn hình + hiện "Chúc mừng"
+function start() {
+  msg.classList.add('show');
+  const shoot = () => launch(W * (0.2 + Math.random() * 0.6), H);
+ 
+  // Loạt pháo đầu tiên
+  for (let i = 0; i < 8; i++) setTimeout(shoot, i * 180);
+ 
+  // Tiếp tục bắn liên tục
+  setInterval(shoot, 600);
+}
+window.addEventListener('load', start);
+</script>
+</body>
+</html>
